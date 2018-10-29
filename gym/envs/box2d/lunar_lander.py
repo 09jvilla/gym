@@ -361,7 +361,7 @@ class LunarLander(gym.Env, EzPickle):
 class LunarLanderContinuous(LunarLander):
     continuous = True
 
-def heuristic(env, s):
+def heuristic(env, s, dumb):
     # Heuristic for:
     # 1. Testing. 
     # 2. Demonstration rollout.
@@ -371,11 +371,17 @@ def heuristic(env, s):
     hover_targ = 0.55*np.abs(s[0])           # target y should be proporional to horizontal offset
 
     # PID controller: s[4] angle, s[5] angularSpeed
-    angle_todo = (angle_targ - s[4])*0.5 - (s[5])*1.0
+    if dumb==False:
+        angle_todo = (angle_targ - s[4])*0.5 - (s[5])*1.0
+    else:
+        angle_todo = (angle_targ - s[4])*0.5 
     #print("angle_targ=%0.2f, angle_todo=%0.2f" % (angle_targ, angle_todo))
 
     # PID controller: s[1] vertical coordinate s[3] vertical speed
-    hover_todo = (hover_targ - s[1])*0.5 - (s[3])*0.5
+    if dumb==False:
+        hover_todo = (hover_targ - s[1])*0.5 - (s[3])*0.5
+    else:
+        hover_todo =  (hover_targ - s[1])*0.5 - (s[3])*0.5
     #print("hover_targ=%0.2f, hover_todo=%0.2f" % (hover_targ, hover_todo))
 
     if s[6] or s[7]: # legs have contact
@@ -392,13 +398,13 @@ def heuristic(env, s):
         elif angle_todo > +0.05: a = 1
     return a
 
-def demo_heuristic_lander(env, seed=None, render=False):
+def demo_heuristic_lander(env, seed=None, render=False, dumb=False):
     env.seed(seed)
     total_reward = 0
     steps = 0
     s = env.reset()
     while True:
-        a = heuristic(env, s)
+        a = heuristic(env, s, dumb)
         s, r, done, info = env.step(a)
         total_reward += r
 
@@ -406,9 +412,11 @@ def demo_heuristic_lander(env, seed=None, render=False):
             still_open = env.render()
             if still_open == False: break
 
+        """
         if steps % 20 == 0 or done:
             print("observations:", " ".join(["{:+0.2f}".format(x) for x in s]))
             print("step {} total_reward {:+0.2f}".format(steps, total_reward))
+        """
         steps += 1
         if done: break
     return total_reward
