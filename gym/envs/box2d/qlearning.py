@@ -3,6 +3,7 @@ import math, random
 from collections import defaultdict
 import pdb
 import matplotlib.pyplot as plt
+from precision.to_precision import to_precision
 
 def identityFeatureExtractor(state, action):
     #have to turn state into a list so its hashable
@@ -13,20 +14,24 @@ def identityFeatureExtractor(state, action):
 
 
 def roundedFeatureExtractor(state, action):
-    #lets round the velocities and positions
+	#lets round the velocities and positions
 
-    rounded_list = []
+	rounded_list = []
 
-    for i in range(len(state)):
-    	#the minus 2 is because we don't want to touch the lunar lander's leg info
-    	if i < (len(state)-2):
-    		rounded_list.append(round( state[i], 3) )
-    	else:
-    		rounded_list.append(state[i])
+	for i in range(len(state)):
+		#the minus 2 is because we don't want to touch the lunar lander's leg info
+		if i < (len(state)-2):
+			#Used this before to always round to 2 decimal places but replaced with sigfig rounding
+			#rounded_list.append(round( state[i], 2) )
 
-    roundedfeatureKey = ( tuple(rounded_list), action )
-    featureValue = 1
-    return [(roundedfeatureKey, featureValue)]
+			rounded_list.append( float(to_precision( state[i], 2, notation='std')) )
+		else:
+			rounded_list.append(state[i])
+
+	#pdb.set_trace()
+	roundedfeatureKey = ( tuple(rounded_list), action )
+	featureValue = 1
+	return [(roundedfeatureKey, featureValue)]
 
 class QLearningAlgorithm():
 	def __init__(self, actions, discount, featureExtractor, explorationProb=0.2):
