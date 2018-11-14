@@ -104,6 +104,18 @@ class LunarLander(gym.Env, EzPickle):
 
         self.reset()
 
+    #Jen: Adding actions function; return their set of possible actions
+    def actions(self, state):
+        if self.continuous:
+            raise Exception("Continuous version yet to be implemented.")
+        else:
+            #note that in the future, should just use self.action_space
+            return range(0,self.action_space.n)
+
+    #Jen: adding discount function
+    def discount(self):
+        return 1.0
+
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
