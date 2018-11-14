@@ -120,12 +120,15 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 				#this trial has ended so break out of it
 				break
 
-            #advance state
+                        #advance state
 			state = nextState
 
 		if verbose:
-			print("Trial %d (totalReward = %s)" % (trial, totalReward))
-		totalRewards.append(totalReward)
+			if trial % 100 == 0:
+				print("Trial %d (totalReward = %s)" % (trial, totalReward))
+
+		if numTrials <= 50000 or (trial % 100 == 0):
+			totalRewards.append(totalReward)
 
 	if verbose:
 		print("Finished simulating.")
@@ -134,18 +137,19 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
-	trainRewards = simulate(myLander, myrl, numTrials)
+	trainRewards = simulate(myLander, myrl, numTrials, verbose=True)
 	return myrl, trainRewards
 
 def main():
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=10 )
+	myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500000 )
 
 	print("Training completed. Switching to testing.")
 
 	plt.plot(trainRewards)
 	plt.ylabel('trainingReward')
 	plt.xlabel('Trial No.')
+	plt.savefig("trainingperf.png")
 	plt.show()
 
 	#Now test trained model:
