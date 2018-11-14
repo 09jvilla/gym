@@ -146,6 +146,7 @@ def main():
 	plt.plot(trainRewards)
 	plt.ylabel('trainingReward')
 	plt.xlabel('Trial No.')
+	plt.savefig('trainprogress.png')
 	plt.show()
 
 	#Now test trained model:
