@@ -2,12 +2,31 @@ from lunar_lander import LunarLander
 import math, random
 from collections import defaultdict
 import pdb
+import matplotlib.pyplot as plt
 
 def identityFeatureExtractor(state, action):
     #have to turn state into a list so its hashable
     featureKey = ( tuple(state.tolist()), action )
     featureValue = 1
+    #pdb.set_trace()
     return [(featureKey, featureValue)]
+
+
+def roundedFeatureExtractor(state, action):
+    #lets round the velocities and positions
+
+    rounded_list = []
+
+    for i in range(len(state)):
+    	#the minus 2 is because we don't want to touch the lunar lander's leg info
+    	if i < (len(state)-2):
+    		rounded_list.append(round( state[i], 3) )
+    	else:
+    		rounded_list.append(state[i])
+
+    roundedfeatureKey = ( tuple(rounded_list), action )
+    featureValue = 1
+    return [(roundedfeatureKey, featureValue)]
 
 class QLearningAlgorithm():
 	def __init__(self, actions, discount, featureExtractor, explorationProb=0.2):
@@ -65,7 +84,7 @@ class QLearningAlgorithm():
 			self.weights[fname] = self.weights[fname] - update_multiplier*fval
 
 
-def simulate( Lander, rl, numTrials, maxIters=10000, verbose=True):
+def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=True):
 	totalRewards = []
 
 	for trial in range(0,numTrials):
@@ -85,8 +104,8 @@ def simulate( Lander, rl, numTrials, maxIters=10000, verbose=True):
 			#returns new state, reward, boolean indicating done and info
 			nextState, reward, is_done, info = Lander.step(action)
 
-			
-			rl.incorporateFeedback(state, action, reward, nextState, is_done)
+			if do_training:
+				rl.incorporateFeedback(state, action, reward, nextState, is_done)
 
 			#Keep track of reward as I go, multiplying by discount factor each time
 			totalReward += totalDiscount * reward
@@ -106,13 +125,29 @@ def simulate( Lander, rl, numTrials, maxIters=10000, verbose=True):
 	if verbose:
 		print("Finished simulating.")
 
+	return totalRewards
+
 def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
-	simulate(myLander, myrl, numTrials)
+	trainRewards = simulate(myLander, myrl, numTrials)
+	return myrl, trainRewards
 
 def main():
 	myLander = LunarLander()
-	train_QL( myLander, identityFeatureExtractor )
+	myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=10 )
+
+	print("Training completed. Switching to testing.")
+
+	plt.plot(trainRewards)
+	plt.ylabel('trainingReward')
+	plt.xlabel('Trial No.')
+	plt.show()
+
+	#Now test trained model:
+	myrl.explorationProb = 0
+	#Can simulate from here:
+	simulate(myLander, myrl, numTrials=100, do_training=False)
+
 
 if __name__ == '__main__':
 	main()
