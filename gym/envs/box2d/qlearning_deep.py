@@ -5,53 +5,39 @@ import pdb
 import matplotlib.pyplot as plt
 from precision.to_precision import to_precision
 import keras
-from keras.models import Sequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense, Activation, Multiply
+from keras.layers import Input, Embedding, LSTM, Dense, Lambda
+from keras.models import Model
 import collections
 import numpy as np
+from keras.utils import plot_model
 
 
 def build_model( input_size=8, num_actions=4 ):
-	model = Sequential()
-	model.add(Dense(4, input_dim=input_size))
-	model.add(Activation('relu'))
-	model.add(Dense(num_actions))
-	model.add(Activation('relu'))
+	#pdb.set_trace()
+	main_input = Input(shape=(input_size,), name='sim_state')
+	x = Dense(4, activation='relu')(main_input)
+	all_q_estimates = Dense(num_actions, activation='relu')(x)
 
-	model.compile(loss=keras.losses.mean_squared_error, \
-					optimizer='adam', \
-					metrics=['accuracy'])
+	auxiliary_input = Input(shape=(num_actions,), name='action_mask')
 
-	return model
+	do_mask = Multiply()([all_q_estimates, auxiliary_input])
+	masked_loss = Lambda(lambda x: keras.backend.sum(x), output_shape=(1,), name='masked_loss' )(do_mask)
 
+	model_pred = Model(inputs=[main_input], outputs=[all_q_estimates])
+	model_train = Model(inputs=[main_input, auxiliary_input], outputs=[masked_loss])
 
-def identityFeatureExtractor(state, action):
-    #have to turn state into a list so its hashable
-    featureKey = ( tuple(state.tolist()), action )
-    featureValue = 1
-    #pdb.set_trace()
-    return [(featureKey, featureValue)]
+	plot_model(model_train, to_file='model_train.png', show_shapes=True)
+	plot_model(model_pred, to_file='model_pred.png', show_shapes=True)
 
-
-def roundedFeatureExtractor(state, action):
-	#lets round the velocities and positions
-
-	rounded_list = []
-
-	for i in range(len(state)):
-		#the minus 2 is because we don't want to touch the lunar lander's leg info
-		if i < (len(state)-2):
-			#Used this before to always round to 2 decimal places but replaced with sigfig rounding
-			#rounded_list.append(round( state[i], 2) )
-
-			rounded_list.append( float(to_precision( state[i], 2, notation='std')) )
-		else:
-			rounded_list.append(state[i])
 
 	#pdb.set_trace()
-	roundedfeatureKey = ( tuple(rounded_list), action )
-	featureValue = 1
-	return [(roundedfeatureKey, featureValue)]
+
+	model_train.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+
+	return model_train, model_pred
+
+
 
 class QLearningAlgorithm():
 	def __init__(self, actions, discount, featureExtractor, explorationProb=0.2):
@@ -61,7 +47,7 @@ class QLearningAlgorithm():
 		self.explorationProb = explorationProb
 		self.weights = defaultdict(float)
 		self.numIters = 0
-		self.deep_net = build_model()
+		self.deep_net_train, self.deep_net_preds = build_model()
 
     # Return the Q function associated with the weights and features
 	"""def getQ(self, state, action):
@@ -76,7 +62,7 @@ class QLearningAlgorithm():
 		if state.ndim == 1:
 			state = np.expand_dims(state, axis=0)
 
-		return self.deep_net.predict(state)
+		return self.deep_net_preds.predict(state)
 
     # This algorithm will produce an action given a state.
     # Here we use the epsilon-greedy algorithm: with probability
@@ -94,7 +80,7 @@ class QLearningAlgorithm():
 
 	def incorporateFeedback_toNet( self, minibatch ):
 		#need to calculate our loss
-		pdb.set_trace()
+		#pdb.set_trace()
 		x_train = np.array( [x[0] for x in minibatch] )
 		y_train = np.array( [x[2] for x in minibatch] )
 
@@ -106,7 +92,14 @@ class QLearningAlgorithm():
 		vopt_nextstate = np.max(next_stateQs, axis=1)
 		y_train += vopt_nextstate*is_dones*self.discount()
 
-		self.deep_net.fit(x=x_train, y=y_train, batch_size=len(minibatch))
+		##Create an action mask from actions taken
+		taken_actions = np.array( [x[1] for x in minibatch])
+		#4 is num actions
+		one_hot = np.zeros((len(minibatch), 4))
+		one_hot[np.arange(len(minibatch)), taken_actions] = 1
+
+
+		self.deep_net_train.fit({'sim_state': x_train, 'action_mask': one_hot }, {'masked_loss': y_train}, batch_size=len(minibatch))
 
 		return
 
@@ -235,7 +228,7 @@ def init_memory(Lander, rl, memsize = 3000):
 def main():
 
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=10 )
+	myrl, trainRewards = train_QL( myLander, None, numTrials=10 )
 
 	print("Training completed. Switching to testing.")
 
