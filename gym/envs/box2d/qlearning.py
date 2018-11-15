@@ -1,3 +1,4 @@
+import time
 from lunar_lander import LunarLander
 import math, random
 from collections import defaultdict
@@ -228,7 +229,7 @@ def train_QL( myLander, featureExtractor, numTrials=1000 ):
 
 def main():
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=1000 )
+	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=500000 )
 	# myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
 	print("Training completed. Switching to testing.")
@@ -236,7 +237,7 @@ def main():
 	plt.plot(trainRewards)
 	plt.ylabel('trainingReward')
 	plt.xlabel('Trial No.')
-	plt.savefig('trainprogress.png')
+	plt.savefig("output/trainprogress"+ time.strftime("%m%d_%H%M") )
 	plt.show()
 
 	#Now test trained model:
