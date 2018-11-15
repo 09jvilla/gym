@@ -116,6 +116,10 @@ class LunarLander(gym.Env, EzPickle):
     def discount(self):
         return 1.0
 
+	#Jenna: get the size of the world
+    def getWorldSize(self):
+        return [VIEWPORT_W, VIEWPORT_H]
+
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
@@ -375,7 +379,7 @@ class LunarLanderContinuous(LunarLander):
 
 def heuristic(env, s, dumb):
     # Heuristic for:
-    # 1. Testing. 
+    # 1. Testing.
     # 2. Demonstration rollout.
     angle_targ = s[0]*0.5 + s[2]*1.0         # angle should point towards center (s[0] is horizontal coordinate, s[2] hor speed)
     if angle_targ >  0.4: angle_targ =  0.4  # more than 0.4 radians (22 degrees) is bad
@@ -386,7 +390,7 @@ def heuristic(env, s, dumb):
     if dumb==False:
         angle_todo = (angle_targ - s[4])*0.5 - (s[5])*1.0
     else:
-        angle_todo = (angle_targ - s[4])*0.5 
+        angle_todo = (angle_targ - s[4])*0.5
     #print("angle_targ=%0.2f, angle_todo=%0.2f" % (angle_targ, angle_todo))
 
     # PID controller: s[1] vertical coordinate s[3] vertical speed
@@ -436,5 +440,3 @@ def demo_heuristic_lander(env, seed=None, render=False, dumb=False):
 
 if __name__ == '__main__':
     demo_heuristic_lander(LunarLander(), render=True)
-    
-    
