@@ -12,7 +12,7 @@ import collections
 import numpy as np
 from keras.callbacks import History
 from keras.utils import plot_model
-
+import argparse
 
 def build_model( input_size=8, num_actions=4 ):
  
@@ -44,18 +44,19 @@ def build_model( input_size=8, num_actions=4 ):
 
 
     #set up our training model with adam optimizer using MSE loss
-    model_train.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+    model_train.compile(optimizer='sgd', loss='mean_squared_error', metrics=['accuracy'])
 
     return model_train, model_pred
 
 
 
 class QLearningAlgorithm():
-    def __init__(self, actions, discount, explorationProb=0.2):
+    def __init__(self, actions, discount, epochs, explorationProb=0.2):
         self.actions = actions
         self.discount = discount
         self.explorationProb = explorationProb
         self.numIters = 0
+        self.epochs = epochs
         self.deep_net_train, self.deep_net_preds = build_model()
 
     def getQ(self, state ):
@@ -104,7 +105,7 @@ class QLearningAlgorithm():
 
         #train the model. give it as inputs the state and the action mask (so you only look at the Q value for the action you took
         #then you want it to approximate the "target" value, our y_train
-        his = self.deep_net_train.fit({'sim_state': x_train, 'action_mask': one_hot }, {'masked_loss': y_train}, batch_size=len(minibatch), verbose=verbose)
+        his = self.deep_net_train.fit({'sim_state': x_train, 'action_mask': one_hot }, {'masked_loss': y_train}, batch_size=len(minibatch), epochs=self.epochs, verbose=False)
 
         return his.history['loss']
 
@@ -161,12 +162,13 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
 
     return totalRewards, totalLoss
 
-def train_QL( myLander, numTrials=1000 ):
-    myrl = QLearningAlgorithm(myLander.actions, myLander.discount )
-    
+def train_QL( myLander, numTrials, numEpochs,  memsize ):
+    myrl = QLearningAlgorithm(myLander.actions, myLander.discount , numEpochs)
+   
+
     #init memory
     print("Init memory: ")
-    memD = init_memory(myLander, myrl)
+    memD = init_memory(myLander, myrl, memsize)
 
     trainRewards, totalLoss = simulate(myLander, myrl, memD, numTrials)
     return myrl, trainRewards, totalLoss
@@ -174,7 +176,7 @@ def train_QL( myLander, numTrials=1000 ):
 
 #it takes about 215 steps to complete the landing, so I'll round to 300
 #lets be able to hold at least 10 such simulations
-def init_memory(Lander, rl, memsize = 3000):
+def init_memory(Lander, rl, memsize ):
     prevexploreprob = rl.explorationProb 
 
     #lets just act randomly
@@ -200,29 +202,35 @@ def init_memory(Lander, rl, memsize = 3000):
     return D
 
 
-def main():
+def main(args):
 
     myLander = LunarLander()
-    myrl, trainRewards, totalLoss = train_QL( myLander, numTrials=5 )
+    myrl, trainRewards, totalLoss = train_QL( myLander, numTrials=args.num_train_trials, numEpochs=args.num_epochs, memsize=args.memsize )
 
     print("Training completed. Switching to testing.")
 
     plt.plot(trainRewards)
     plt.ylabel('trainingReward')
     plt.xlabel('Trial No.')
-    plt.savefig('trainprogress.png')
-    plt.show()
+    plt.savefig('plots/trainprogress_memSz' + str(args.memsize) + '_epochs' + str(args.num_epochs) + '.png')
+    #plt.show()
 
     plt.clf()
     plt.plot(totalLoss)
-    plt.savefig('LossOverTime.png')
-    plt.show()
+    plt.savefig('plots/loss_v_time_memSz_' + str(args.memsize) + '_epochs' + str(args.num_epochs) + '.png')
+    #plt.show()
     
     #Now test trained model:
     myrl.explorationProb = 0
     #Can simulate from here:
-    simulate(myLander, myrl, memD=None,  numTrials=100, do_training=False, verbose=False)
+    simulate(myLander, myrl, memD=None,  numTrials=args.num_test_trials, do_training=False, verbose=False)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--num_train_trials", default='1000', type=int, help="Number of simluations to train for")
+    parser.add_argument("--num_test_trials", default='100', type=int, help="Number of simluations to test for")
+    parser.add_argument("--num_epochs", default='1', type=int, help="Number of epochs that each train set will train for")
+    parser.add_argument("--memsize", default='3000', type=int, help="Size of memory buffer")
+    args = parser.parse_args()
+    main(args)
