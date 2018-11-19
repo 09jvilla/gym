@@ -10,6 +10,7 @@ from keras.layers import Input, Embedding, LSTM, Dense, Lambda
 from keras.models import Model
 import collections
 import numpy as np
+from keras.callbacks import History
 from keras.utils import plot_model
 
 
@@ -27,8 +28,8 @@ def build_model( input_size=8, num_actions=4 ):
 	model_pred = Model(inputs=[main_input], outputs=[all_q_estimates])
 	model_train = Model(inputs=[main_input, auxiliary_input], outputs=[masked_loss])
 
-	plot_model(model_train, to_file='model_train.png', show_shapes=True)
-	plot_model(model_pred, to_file='model_pred.png', show_shapes=True)
+	#plot_model(model_train, to_file='model_train', show_shapes=True)
+	#plot_model(model_pred, to_file='model_pred', show_shapes=True)
 
 
 	#pdb.set_trace()
@@ -48,6 +49,7 @@ class QLearningAlgorithm():
 		self.weights = defaultdict(float)
 		self.numIters = 0
 		self.deep_net_train, self.deep_net_preds = build_model()
+
 
     # Return the Q function associated with the weights and features
 	"""def getQ(self, state, action):
@@ -98,10 +100,9 @@ class QLearningAlgorithm():
 		one_hot = np.zeros((len(minibatch), 4))
 		one_hot[np.arange(len(minibatch)), taken_actions] = 1
 
+		his = self.deep_net_train.fit({'sim_state': x_train, 'action_mask': one_hot }, {'masked_loss': y_train}, batch_size=len(minibatch), verbose=1)
 
-		self.deep_net_train.fit({'sim_state': x_train, 'action_mask': one_hot }, {'masked_loss': y_train}, batch_size=len(minibatch))
-
-		return
+		return his.history['loss']
 
 
 
@@ -135,6 +136,7 @@ class QLearningAlgorithm():
 
 def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, verbose=True):
 	totalRewards = []
+	totalLoss = []
 
 	for trial in range(0,numTrials):
 
@@ -164,8 +166,8 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
 			#randomly sample 10% of memory size
 			if do_training:
 				memD_sample = random.sample(memD, round(len(memD)*0.1))
-				rl.incorporateFeedback_toNet(memD_sample)
-
+				loss_list = rl.incorporateFeedback_toNet(memD_sample)
+				
 
 			if is_done:
 				#this trial has ended so break out of it
@@ -174,14 +176,17 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
             #advance state
 			state = nextState
 
+		totalLoss.extend(loss_list)
 		if verbose:
 			print("Trial %d (totalReward = %s)" % (trial, totalReward))
+			print("Loss: " + str(loss_list))
+		
 		totalRewards.append(totalReward)
 
 	if verbose:
 		print("Finished simulating.")
 
-	return totalRewards
+	return totalRewards, totalLoss
 
 def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
@@ -192,8 +197,8 @@ def train_QL( myLander, featureExtractor, numTrials=1000 ):
 
 
 
-	trainRewards = simulate(myLander, myrl, memD, numTrials)
-	return myrl, trainRewards
+	trainRewards, totalLoss = simulate(myLander, myrl, memD, numTrials)
+	return myrl, trainRewards, totalLoss
 
 
 #it takes about 215 steps to complete the landing, so I'll round to 300
@@ -228,7 +233,7 @@ def init_memory(Lander, rl, memsize = 3000):
 def main():
 
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, None, numTrials=10 )
+	myrl, trainRewards, totalLoss = train_QL( myLander, None, numTrials=5 )
 
 	print("Training completed. Switching to testing.")
 
@@ -238,10 +243,15 @@ def main():
 	plt.savefig('trainprogress.png')
 	plt.show()
 
+	plt.clf()
+	plt.plot(totalLoss)
+	plt.savefig('LossOverTime.png')
+	plt.show()
+	
 	#Now test trained model:
 	myrl.explorationProb = 0
 	#Can simulate from here:
-	simulate(myLander, myrl, numTrials=100, do_training=False)
+	#simulate(myLander, myrl, numTrials=100, do_training=False)
 
 
 if __name__ == '__main__':
