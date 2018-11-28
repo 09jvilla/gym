@@ -1,0 +1,36 @@
+This manual has two parts:
+-GCE SDK setup
+-SSH
+
+============================================
+0. Check what you have
+First, you should have access to LunarLander project and VM on Google cloud platform. Use your stanford account and check out:
+
+console.cloud.google.com
+
+You should be able to see 'LunarLander' project under Compute Engine. 
+
+!!!!!!!!!!!!!IMPORTNAT!!!!!!!!!!!!!!!!!!!!!!
+you have full access to start and stop the instance. Remember to start the instance before SSH, but also remember to STOP the instance after you're done since we're charged hourly while the instance is on. For now I've set up the project with a lower spec machine (within $50 google credit) but we can change this setting very easily in the future.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+1. GCE SDK setup
+-Follow instructions up to step 1 of 'Initialize SDK' (https://cloud.google.com/sdk/docs/quickstarts )
+(select the right OS as needed)
+-Note. option 4 on 'before you begin' is not optional on Linux/Mac. Run ./google-cloud-sdk/install.sh as recommended, and MAKE SURE YOU RESPOND YES when they prompt to add gcloud to $PATH$.
+
+-Step 2 of Initialize SDK. 
+  You need to use your stanford (jvilla3@stanford.edu) account now. Let me know if you'd like to change. As a matter of fact, I'm pretty certain you can add yourself with Stanford account.
+
+- Follow the rest of the instruction, there shouldn't be anything very interesting after this point
+
+2. SSH
+If you set up your default time zone (step 4&5 in above setup guide), your command to SSH should be just:
+
+gcloud compute ssh lunarlander-vm
+
+Full command is (just in case above doesn't work): 
+
+gcloud compute --project "unified-spider-223919" ssh --zone "us-west1-b" "lunarlander-vm"
+
+Again, remember to start the instance before SSH; also to stop the instance after SSH. 
