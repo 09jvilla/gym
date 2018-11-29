@@ -70,11 +70,14 @@ def build_model( input_size=8, num_actions=4 ):
 
 
 class QLearningAlgorithm():
-    def __init__(self, actions, discount, epochs, explorationProb=0.0):
+    def __init__(self, actions, discount, epochs, allow_explore=True):
         self.actions = actions
         self.discount = discount
-        self.explorationProb = explorationProb
+        self.allow_explore = allow_explore
         self.numIters = 0
+        self.explore_decay=0.0001 
+        self.explore_start=1.0
+        self.explore_stop=0.01
         self.epochs = epochs
         self.deep_net_train, self.deep_net_preds = build_model()
 
@@ -88,12 +91,18 @@ class QLearningAlgorithm():
     # This algorithm will produce an action given a state.
     # Here we use the epsilon-greedy algorithm: with probability
     # |explorationProb|, take a random action.
-    def getAction(self, state):
-        self.numIters += 1
-        if random.random() < self.explorationProb:
-            return random.choice(self.actions(state))
+    def getAction(self, state, nodecay=False):
+        
+        if not nodecay:
+            self.numIters += 1
+        
+        randval = random.random()
+        exploreval = self.explore_stop + (self.explore_start - self.explore_stop)*np.exp(-self.explore_decay*self.numIters) 
+       
+        if (not self.allow_explore) or randval>exploreval:
+            return np.argmax( self.getQ(state) )
         else:
-            return np.argmax( self.getQ(state)  )
+            return random.choice(self.actions(state))
 
     def incorporateFeedback_toNet( self, minibatch , verbose ):
         #numpy array from initial state
@@ -198,17 +207,13 @@ def train_QL( myLander, numTrials, numEpochs,  memsize ):
 #it takes about 215 steps to complete the landing, so I'll round to 300
 #lets be able to hold at least 10 such simulations
 def init_memory(Lander, rl, memsize ):
-    prevexploreprob = rl.explorationProb 
-
-    #lets just act randomly
-    rl.explorationProb = 1.0
 
     D = collections.deque(maxlen=memsize)
     state = Lander.reset()
 
-    for i in range(0,memsize):
+    for i in range(0,SAMPLE_SIZE):
         #do random action
-        action = rl.getAction(state)
+        action = rl.getAction(state, nodecay=True)
         nextState, reward, is_done, info = Lander.step(action)
 
         D.append( (state, action, reward, nextState, is_done) )
@@ -218,8 +223,6 @@ def init_memory(Lander, rl, memsize ):
         else:
             state = nextState
 
-    #reset this back to exploration prob
-    rl.explorationProb = prevexploreprob
     return D
 
 
@@ -254,7 +257,7 @@ if __name__ == '__main__':
     parser.add_argument("--num_train_trials", default='1000', type=int, help="Number of simluations to train for")
     parser.add_argument("--num_test_trials", default='100', type=int, help="Number of simluations to test for")
     parser.add_argument("--num_epochs", default='100', type=int, help="Number of epochs that each train set will train for")
-    parser.add_argument("--memsize", default='10000', type=int, help="Size of memory buffer")
+    parser.add_argument("--memsize", default='1000000', type=int, help="Size of memory buffer")
     parser.add_argument("--discount", default='1.0', type=float, help="Discount factor for rewards")
     args = parser.parse_args()
     main(args)
