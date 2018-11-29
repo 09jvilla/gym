@@ -13,16 +13,34 @@ import numpy as np
 from keras.callbacks import History
 from keras.utils import plot_model
 import argparse
+from keras import regularizers
+from keras.optimizers import Adam
+
+SAMPLE_SIZE=64
+TRAIN_FREQ=4
+LR=5e-4
+EPS=1e-8
+
 
 def build_model( input_size=8, num_actions=4 ):
  
     #tensor that takes state as input (8 elements)
     main_input = Input(shape=(input_size,), name='sim_state')
     #connect input to 4 neuron hidden later with relu activation
-    x = Dense(4, activation='relu')(main_input)
+    
+    model_type = 1
+    if model_type == 0:
+        x = Dense(4, activation='relu')(main_input)
+    elif model_type == 1:
+        x = Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0) )(main_input)
+        x = Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0) )(x)
+        x = Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0) )(x)
+    else:
+        raise Exception('Undefined model type')
+    
     #connect hidden layer to output layer with 4 neurons (to represent Q score of each of our 4 actions)
     #currently using relu activation -- not sure if that is the right choice
-    all_q_estimates = Dense(num_actions, activation='relu')(x)
+    all_q_estimates = Dense( num_actions, kernel_regularizer=regularizers.l2(0) )(x)
 
     #tensor that takes 4 element, 1 hot vector as input
     #this is a mask vector - there will be a 1 set for the action taken, 0's elsewhere
@@ -39,19 +57,20 @@ def build_model( input_size=8, num_actions=4 ):
     #model for training - gives you q value only for action that ends up getting taken
     model_train = Model(inputs=[main_input, auxiliary_input], outputs=[masked_loss])
 
-    plot_model(model_train, to_file='model_train', show_shapes=True)
-    plot_model(model_pred, to_file='model_pred', show_shapes=True)
+    plot_model(model_train, to_file='model_train'+str(model_type), show_shapes=True)
+    plot_model(model_pred, to_file='model_pred'+str(model_type), show_shapes=True)
 
 
     #set up our training model with adam optimizer using MSE loss
-    model_train.compile(optimizer='sgd', loss='mean_squared_error', metrics=['accuracy'])
+    adopt = keras.optimizers.Adam(lr=LR, epsilon=EPS)
+    model_train.compile(optimizer=adopt, loss='mean_squared_error' )
 
     return model_train, model_pred
 
 
 
 class QLearningAlgorithm():
-    def __init__(self, actions, discount, epochs, explorationProb=0.2):
+    def __init__(self, actions, discount, epochs, explorationProb=0.0):
         self.actions = actions
         self.discount = discount
         self.explorationProb = explorationProb
@@ -105,14 +124,14 @@ class QLearningAlgorithm():
 
         #train the model. give it as inputs the state and the action mask (so you only look at the Q value for the action you took
         #then you want it to approximate the "target" value, our y_train
+        #pdb.set_trace()
         his = self.deep_net_train.fit({'sim_state': x_train, 'action_mask': one_hot }, {'masked_loss': y_train}, batch_size=len(minibatch), epochs=self.epochs, verbose=False)
 
-        return his.history['loss']
+        return his.history['loss'][-1]
 
 def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, verbose=True):
     totalRewards = []
     totalLoss = []
-    loss_list = []
 
     for trial in range(0,numTrials):
 
@@ -140,8 +159,10 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
 	    #do rl on that
             if do_training:
                 memD.append( (state, action, reward, nextState, is_done) )
-                memD_sample = random.sample(memD, round(len(memD)*0.1))
-                loss_list = rl.incorporateFeedback_toNet(memD_sample, verbose )
+                if _ % TRAIN_FREQ == 0 :
+                    #pdb.set_trace()
+                    memD_sample = random.sample(memD, SAMPLE_SIZE)
+                    loss = rl.incorporateFeedback_toNet(memD_sample, verbose )
                 
             if is_done:
                 #this trial has ended so break out of it
@@ -150,10 +171,10 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
             #advance state
             state = nextState
 
-        totalLoss.extend(loss_list)
+        totalLoss.append(loss)
         if verbose:
             print("Trial %d (totalReward = %s)" % (trial, totalReward))
-            print("Loss: " + str(loss_list))
+            print("Loss: " + str(loss))
         
         totalRewards.append(totalReward)
 
@@ -205,6 +226,8 @@ def init_memory(Lander, rl, memsize ):
 def main(args):
 
     myLander = LunarLander()
+    myLander.set_discount(args.discount)
+
     myrl, trainRewards, totalLoss = train_QL( myLander, numTrials=args.num_train_trials, numEpochs=args.num_epochs, memsize=args.memsize )
 
     print("Training completed. Switching to testing.")
@@ -230,7 +253,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_train_trials", default='1000', type=int, help="Number of simluations to train for")
     parser.add_argument("--num_test_trials", default='100', type=int, help="Number of simluations to test for")
-    parser.add_argument("--num_epochs", default='1', type=int, help="Number of epochs that each train set will train for")
-    parser.add_argument("--memsize", default='3000', type=int, help="Size of memory buffer")
+    parser.add_argument("--num_epochs", default='100', type=int, help="Number of epochs that each train set will train for")
+    parser.add_argument("--memsize", default='10000', type=int, help="Size of memory buffer")
+    parser.add_argument("--discount", default='1.0', type=float, help="Discount factor for rewards")
     args = parser.parse_args()
     main(args)
