@@ -152,8 +152,11 @@ class LunarLander(gym.Env, EzPickle):
         CHUNKS = 11
         height = self.np_random.uniform(0, H/2, size=(CHUNKS+1,) )
         chunk_x  = [W/(CHUNKS-1)*i for i in range(CHUNKS)]
-        self.helipad_x1 = chunk_x[CHUNKS//2-1]
-        self.helipad_x2 = chunk_x[CHUNKS//2+1]
+        
+        ##JEV: make landing pad wider
+        self.helipad_x1 = chunk_x[1]
+        self.helipad_x2 = chunk_x[CHUNKS-2]
+
         self.helipad_y  = H/4
         height[CHUNKS//2-2] = self.helipad_y
         height[CHUNKS//2-1] = self.helipad_y
@@ -261,7 +264,9 @@ class LunarLander(gym.Env, EzPickle):
             assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
         # Engines
-        self.lander.angle = 0 #trolling 1
+        #JEV: Hack -- set lander andle to zero
+        self.lander.angle = 0
+
         tip  = (math.sin(self.lander.angle), math.cos(self.lander.angle))
         side = (-tip[1], tip[0]);
         dispersion = [self.np_random.uniform(-1.0, +1.0) / SCALE for _ in range(2)]
@@ -328,12 +333,16 @@ class LunarLander(gym.Env, EzPickle):
         reward -= s_power*0.03
 
         done = False
-        if self.game_over or abs(state[0]) >= 1.0:
+        if abs(state[0]) >= 1.0:
             done   = True
             reward = -100
+        if self.game_over:
+            done   = True
+            reward = +100
         if not self.lander.awake:
             done   = True
             reward = +100
+
         return np.array(state, dtype=np.float32), reward, done, {}
 
     def render(self, mode='human'):

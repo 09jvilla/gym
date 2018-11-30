@@ -5,7 +5,7 @@ total_reward_array = []
 
 myLunarLander = LunarLander()
 
-dorender = False
+dorender = True
 num_iters = 100
 isdumb= True
 
