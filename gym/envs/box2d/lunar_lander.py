@@ -83,6 +83,7 @@ class LunarLander(gym.Env, EzPickle):
         self.seed()
         self.viewer = None
 
+        self.discount_param = 1.0
         self.world = Box2D.b2World()
         self.moon = None
         self.lander = None
@@ -112,9 +113,11 @@ class LunarLander(gym.Env, EzPickle):
             #note that in the future, should just use self.action_space
             return range(0,self.action_space.n)
 
+    def set_discount(self, x):
+        self.discount_param = x
     #Jen: adding discount function
     def discount(self):
-        return 1.0
+        return self.discount_param
 
 	#Jenna: get the size of the world
     def getWorldSize(self):
