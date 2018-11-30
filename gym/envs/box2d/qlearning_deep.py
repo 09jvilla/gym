@@ -78,7 +78,7 @@ class QLearningAlgorithm():
         self.allow_explore = allow_explore
         self.numIters = 0
         self.explore_decay=0.0001 
-        self.explore_start=1.0
+        self.explore_start=0.3
         self.explore_stop=0.01
         self.epochs = epochs
         self.deep_net_train, self.deep_net_preds = build_model()
@@ -140,9 +140,10 @@ class QLearningAlgorithm():
 
         return his.history['loss'][-1]
 
-def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, verbose=True):
+def simulate( Lander, rl, memD, numTrials, maxIters=600, do_training=True, verbose=True):
     totalRewards = []
     totalLoss = []
+    loss = 0
 
     for trial in range(0,numTrials):
 
