@@ -258,7 +258,6 @@ class LunarLander(gym.Env, EzPickle):
             assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
         # Engines
-        self.lander.angle = 0 #trolling 1
         tip  = (math.sin(self.lander.angle), math.cos(self.lander.angle))
         side = (-tip[1], tip[0]);
         dispersion = [self.np_random.uniform(-1.0, +1.0) / SCALE for _ in range(2)]
