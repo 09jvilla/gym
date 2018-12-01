@@ -225,12 +225,12 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
-	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=True)
+	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=False)
 	return myrl, trainRewards
 
 def main():
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=500 )
+	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=50000 )
 	# myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
 	print("Training completed. Switching to testing.")
