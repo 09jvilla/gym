@@ -200,6 +200,7 @@ class QLearningAlgorithm():
 
 def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=True, render = False):
 	totalRewards = []
+	reward_ls = [0]* numTrials
 	for trial in range(0,numTrials):
 
 		#basically puts us back in start state
@@ -236,6 +237,8 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 			totalReward += totalDiscount * reward
 			totalDiscount *= Lander.discount()
 
+			reward_ls [trial]= totalReward
+
 
 			if render:
 				still_open = Lander.render()
@@ -261,13 +264,17 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 	if verbose:
 		print("Finished simulating.")
-
+	filename = "trial_reward_list"+ time.strftime("%m%d_%H%M") + ".pkl"
+	output = open(filename, 'wb')
+	pickle.dump(reward_ls, output)
+	output.close()
 
 	return totalRewards
 
 def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
 	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=False)
+
 	return myrl, trainRewards
 
 def export_weights_sparse(weight_dict):
@@ -278,7 +285,7 @@ def export_weights_sparse(weight_dict):
 
 def main():
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=2000 )
+	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=50 )
 	export_weights_sparse(myrl.weights)
 	# myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
