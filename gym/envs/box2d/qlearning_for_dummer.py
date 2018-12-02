@@ -2,12 +2,11 @@ import time
 from lunar_lander_dumb import LunarLander
 import math, random
 from collections import defaultdict
-import numpy as np
+
 import pdb
 import matplotlib.pyplot as plt
 from precision.to_precision import to_precision
-STATE_SIZE = 8
-NUM_PAST_STATE = 3
+
 def identityFeatureExtractor(state, action):
     #have to turn state into a list so its hashable
     featureKey = ( tuple(state.tolist()), action )
@@ -129,12 +128,8 @@ class QLearningAlgorithm():
     # Return the Q function associated with the weights and features
 	def getQ(self, state, action):
 		score = 0
-		for i in range (0,NUM_PAST_STATE):
-
-			state_segment = state[i*STATE_SIZE:(i+1)*STATE_SIZE]
-			print(i,np.shape(state_segment))
-			for f, v in self.featureExtractor(state_segment, action):
-				score += self.weights[f] * v
+		for f, v in self.featureExtractor(state, action):
+			score += self.weights[f] * v
 		return score
 
 
@@ -143,12 +138,10 @@ class QLearningAlgorithm():
     # |explorationProb|, take a random action.
 	def getAction(self, state):
 		self.numIters += 1
-		# pdb.set_trace()
-		state_segment = state[(NUM_PAST_STATE-1)*STATE_SIZE:NUM_PAST_STATE*STATE_SIZE]
 		if random.random() < self.explorationProb:
-			return random.choice(self.actions(state_segment))
+			return random.choice(self.actions(state))
 		else:
-			return max((self.getQ(state, action), action) for action in self.actions(state_segment))[1]
+			return max((self.getQ(state, action), action) for action in self.actions(state))[1]
 
     # Call this function to get the step size to update the weights.
 	def getStepSize(self):
@@ -161,25 +154,17 @@ class QLearningAlgorithm():
 	def incorporateFeedback(self, state, action, reward, newState, is_done):
 		# BEGIN_YOUR_CODE (our solution is 12 lines of code, but don't worry if you deviate from this)
 
-		# pdb.set_trace()
-		newState_segment = newState[(NUM_PAST_STATE-1)*STATE_SIZE:NUM_PAST_STATE*STATE_SIZE]
+		#pdb.set_trace()
 		#calculate V_opt(s')
 		if is_done:
 			vopt_newstate = 0
 		else:
-			vopt_newstate = max(self.getQ(newState, newactions) for newactions in self.actions(newState_segment))
+			vopt_newstate = max(self.getQ(newState, newactions) for newactions in self.actions(newState))
 
 		target = reward + self.discount()*vopt_newstate
 		prediction = self.getQ(state,action)
-        # pdb.set_trace()
 
-		features_sa = []
-
-		for i in range (0,NUM_PAST_STATE):
-			state_segment = state[i*STATE_SIZE:(i+1)*STATE_SIZE]
-
-			features_sa.extend(self.featureExtractor( state_segment, action ))
-
+		features_sa = self.featureExtractor( state, action )
 		update_multiplier = self.getStepSize() * ( prediction - target )
 
 		for i in range(0, len(features_sa)):
@@ -210,7 +195,7 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 		for _ in range(0,maxIters):
 			#get action from QLearning Algo
-			action = rl.getAction(state_2)
+			action = rl.getAction(state)
 
 			#simulate action
 			#returns new state, reward, boolean indicating done and info
@@ -236,8 +221,7 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 				break
 
                         #advance state
-			state = new_state
-			state_2 = nextState
+			state = nextState
 
 		if verbose:
 			if totalReward > 150:
@@ -260,27 +244,21 @@ def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=False)
 	return myrl, trainRewards
 
-def export_weights_sparse(weight_dict):
-    filename = "sparse_weight_" + time.strftime("%m%d_%H%M") + ".pkl"
-    output = open(filename, 'wb')
-    pickle.dump(weight_dict, output)
-    output.close()
-
 def main():
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=50 )
+	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=5000 )
 	# myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
 	print("Training completed. Switching to testing.")
 
-	# plt.plot(trainRewards)
-	# plt.ylabel('trainingReward')
-	# plt.xlabel('Trial No.')
-	# plt.savefig("output/trainprogress"+ time.strftime("%m%d_%H%M") )
-	# plt.show()
+	plt.plot(trainRewards)
+	plt.ylabel('trainingReward')
+	plt.xlabel('Trial No.')
+	plt.savefig("output/trainprogress"+ time.strftime("%m%d_%H%M") )
+	plt.show()
 
 	#Now test trained model:
-	myrl.explorationProb = 0
+	myrl.explorationProb = 0.2
 	#Can simulate from here:
 	simulate(myLander, myrl, numTrials=100, do_training=False, render = False)
 
