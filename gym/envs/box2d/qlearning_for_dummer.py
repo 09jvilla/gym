@@ -172,7 +172,7 @@ class QLearningAlgorithm():
 			self.weights[fname] = self.weights[fname] - update_multiplier*fval
 
 
-def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=True, render = True):
+def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=True, render = False):
 	totalRewards = []
 	for trial in range(0,numTrials):
 
@@ -191,7 +191,7 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 			#returns new state, reward, boolean indicating done and info
 			nextState, reward, is_done, info = Lander.step(action)
 			# pdb.set_trace()
-			time.sleep(.5)
+			# time.sleep(.5)
 
 			if do_training:
 				rl.incorporateFeedback(state, action, reward, nextState, is_done)
@@ -213,8 +213,10 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 			state = nextState
 
 		if verbose:
-			# if trial % 100 == 0:
-			if True:
+			if totalReward > 150:
+				print("Trial %d (totalReward = %s)" % (trial, totalReward))
+			if trial % 100 == 0:
+			# if True:
 				print("Trial %d (totalReward = %s)" % (trial, totalReward))
 
 		if numTrials <= 50000 or (trial % 100 == 0):
@@ -228,7 +230,7 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
-	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=True)
+	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=False)
 	return myrl, trainRewards
 
 def main():
@@ -245,7 +247,7 @@ def main():
 	plt.show()
 
 	#Now test trained model:
-	myrl.explorationProb = 0
+	myrl.explorationProb = 0.2
 	#Can simulate from here:
 	simulate(myLander, myrl, numTrials=100, do_training=False, render = False)
 

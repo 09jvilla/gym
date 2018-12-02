@@ -32,7 +32,7 @@ from gym.utils import seeding, EzPickle
 #
 # Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
-FPS    = 5
+FPS    = 20
 SCALE  = 30.0   # affects how fast-paced the game is, forces should be adjusted as well
 
 MAIN_ENGINE_POWER  = 13.0
@@ -283,7 +283,7 @@ class LunarLander(gym.Env, EzPickle):
                 m_power = (np.clip(action[0], 0.0,1.0) + 1.0)*0.5   # 0.5..1.0
                 assert m_power>=0.5 and m_power <= 1.0
             else:
-                m_power = 1.0
+                m_power = 2.5
             # ox =  tip[0]*(4/SCALE + 2*dispersion[0]) + side[0]*dispersion[1]   # 4 is move a bit downwards, +-2 for randomness
             ox =  0
             oy = -tip[1]*(4/SCALE + 2*dispersion[0])
