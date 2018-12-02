@@ -6,6 +6,7 @@ import numpy as np
 import pdb
 import matplotlib.pyplot as plt
 from precision.to_precision import to_precision
+import pickle
 STATE_SIZE = 8
 NUM_PAST_STATE = 3
 def identityFeatureExtractor(state, action):
@@ -173,7 +174,7 @@ class QLearningAlgorithm():
 		for i in range (0,NUM_PAST_STATE):
 			state_segment = state[i*STATE_SIZE:(i+1)*STATE_SIZE]
 			prediction += self.getQ(state_segment, action)
-		print(prediction)
+		# print(prediction)
 		# pdb.set_trace()
 		# 	for f, v in self.featureExtractor(state_segment, action):
         #
@@ -277,7 +278,8 @@ def export_weights_sparse(weight_dict):
 
 def main():
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=500 )
+	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=2000 )
+	export_weights_sparse(myrl.weights)
 	# myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
 	print("Training completed. Switching to testing.")
