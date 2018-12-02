@@ -32,13 +32,14 @@ from gym.utils import seeding, EzPickle
 #
 # Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
-FPS    = 50
+FPS    = 5
 SCALE  = 30.0   # affects how fast-paced the game is, forces should be adjusted as well
 
 MAIN_ENGINE_POWER  = 13.0
 SIDE_ENGINE_POWER  =  0.6
 
-INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
+# INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
+INITIAL_RANDOM = 0.0
 
 LANDER_POLY =[
     (-14,+17), (-17,0), (-17,-10),

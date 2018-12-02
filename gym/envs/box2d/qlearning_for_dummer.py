@@ -28,7 +28,6 @@ def roundedFeatureExtractor(state, action):
 			#Used this before to always round to 2 decimal places but replaced with sigfig rounding
 			#rounded_list.append(round( state[i], 2) )
 
-
 			rounded_list.append( float(to_precision( state[i], 2, notation='std')) )
 		else:
 			rounded_list.append(state[i])
@@ -132,6 +131,7 @@ class QLearningAlgorithm():
 			score += self.weights[f] * v
 		return score
 
+
     # This algorithm will produce an action given a state.
     # Here we use the epsilon-greedy algorithm: with probability
     # |explorationProb|, take a random action.
@@ -172,7 +172,7 @@ class QLearningAlgorithm():
 			self.weights[fname] = self.weights[fname] - update_multiplier*fval
 
 
-def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=True, render = False):
+def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=True, render = True):
 	totalRewards = []
 	for trial in range(0,numTrials):
 
@@ -190,6 +190,8 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 			#simulate action
 			#returns new state, reward, boolean indicating done and info
 			nextState, reward, is_done, info = Lander.step(action)
+			# pdb.set_trace()
+			time.sleep(.5)
 
 			if do_training:
 				rl.incorporateFeedback(state, action, reward, nextState, is_done)
@@ -211,7 +213,8 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 			state = nextState
 
 		if verbose:
-			if trial % 100 == 0:
+			# if trial % 100 == 0:
+			if True:
 				print("Trial %d (totalReward = %s)" % (trial, totalReward))
 
 		if numTrials <= 50000 or (trial % 100 == 0):
@@ -225,12 +228,12 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
-	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=False)
+	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=True)
 	return myrl, trainRewards
 
 def main():
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=50000 )
+	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=5000 )
 	# myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
 	print("Training completed. Switching to testing.")
