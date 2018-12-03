@@ -76,7 +76,7 @@ def improvedFeatureExtractor(state, action):
 	# Input parm parsing: 'giving meanings' to your states
 	x, y, vx, vy, theta, w, touching_l, touching_r = state
 	x_segment = int(((x+1)*10+1)/2)
-	y_segment = int(((y+1)*10+1)/2)
+	y_segment = int(((y)*10))
 	#indicator function for engines
 	#0= nothing is on, 1= fire left engine, 2= fire main engine, 3 = fire right engine
 	engine_on_indicator = [0] * 4
@@ -200,7 +200,8 @@ class QLearningAlgorithm():
 
 def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=True, render = False):
 	totalRewards = []
-	reward_ls = [0]* numTrials
+	if do_training:
+		reward_ls = [0]* numTrials
 	for trial in range(0,numTrials):
 
 		#basically puts us back in start state
@@ -232,12 +233,11 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 			if do_training:
 				rl.incorporateFeedback(state, action, reward, new_state, is_done)
+				reward_ls [trial]= totalReward
 
 			#Keep track of reward as I go, multiplying by discount factor each time
 			totalReward += totalDiscount * reward
 			totalDiscount *= Lander.discount()
-
-			reward_ls [trial]= totalReward
 
 
 			if render:
@@ -255,8 +255,8 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 		if verbose:
 			if totalReward > 150:
 				print("Trial %d (totalReward = %s)" % (trial, totalReward))
-			if trial % 100 == 0:
-			# if True:
+			# if trial % 100 == 0:
+			if True:
 				print("Trial %d (totalReward = %s)" % (trial, totalReward))
 
 		if numTrials <= 50000 or (trial % 100 == 0):
@@ -264,10 +264,21 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 	if verbose:
 		print("Finished simulating.")
-	filename = "trial_reward_list"+ time.strftime("%m%d_%H%M") + ".pkl"
-	output = open(filename, 'wb')
-	pickle.dump(reward_ls, output)
-	output.close()
+    #
+    # """
+    # ##plots
+	# fig = plt.subplot(111)
+	# x = np.linspace(0,numTrials)
+	# plt.scatter(x, reward_ls)
+	# with open(filename, 'wb') as fid:
+    # 	pickle.dump(fig, fid)
+    #
+    # """
+	if do_training:
+		filename = "./output/trial_reward_list"+ time.strftime("%m%d_%H%M") + ".pkl"
+		output = open(filename, 'wb')
+		pickle.dump(reward_ls, output)
+		output.close()
 
 	return totalRewards
 
@@ -275,10 +286,11 @@ def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
 	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=False)
 
+
 	return myrl, trainRewards
 
 def export_weights_sparse(weight_dict):
-    filename = "sparse_weight_" + time.strftime("%m%d_%H%M") + ".pkl"
+    filename = "./output/sparse_weight_" + time.strftime("%m%d_%H%M") + ".pkl"
     output = open(filename, 'wb')
     pickle.dump(weight_dict, output)
     output.close()
