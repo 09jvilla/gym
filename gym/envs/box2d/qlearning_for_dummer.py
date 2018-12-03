@@ -76,7 +76,7 @@ def improvedFeatureExtractor(state, action):
 	# Input parm parsing: 'giving meanings' to your states
 	x, y, vx, vy, theta, w, touching_l, touching_r = state
 	x_segment = int(((x+1)*10+1)/2)
-	y_segment = int(((y)*10))
+	y_segment = int(((y)*10+1))
 	#indicator function for engines
 	#0= nothing is on, 1= fire left engine, 2= fire main engine, 3 = fire right engine
 	engine_on_indicator = [0] * 4
