@@ -1,4 +1,4 @@
-from lunar_lander import LunarLander
+from lunarlander_2d import LunarLander
 import math, random
 from collections import defaultdict
 import pdb
@@ -98,7 +98,6 @@ class QLearningAlgorithm():
         next_states = np.array( [x[3] for x in minibatch] )
         #numpy array of is_dones. 1 if not done, 0 if done
         is_dones = np.logical_not(np.array( [x[4] for x in minibatch] ))
-
         #get Q values for each of the next states
         next_stateQs = self.getQ(next_states)
         #Get the max Q value from that
@@ -139,12 +138,10 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
         #
         action = random.choice(rl.actions(state_1))
         state_2, reward, is_done, info = Lander.step(action)
-        #
-        action = random.choice(rl.actions(state_2))
-        state_3, reward, is_done, info = Lander.step(action)
 
+        #pdb.set_trace()
         state = np.concatenate(((state_0, state_1, state_2)), axis=None)
-        nextState = np.concatenate((state_1, state_2, state_3), axis=None)
+       
 
         totalDiscount = 1
         totalReward = 0
@@ -166,7 +163,8 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
             #randomly sample 10% of memory size
 	    #do rl on that
             if do_training:
-                memD.append( (state, action, reward, nextState, is_done) )
+                #pdb.set_trace()
+                memD.append( (state, action, reward, new_state, is_done) )
                 memD_sample = random.sample(memD, round(len(memD)*0.1))
                 loss_list = rl.incorporateFeedback_toNet(memD_sample, verbose )
 
@@ -175,7 +173,7 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
                 break
 
             #advance state
-            state_0 = state_1
+            state = new_state
 
         totalLoss.extend(loss_list)
         if verbose:
@@ -209,37 +207,35 @@ def init_memory(Lander, rl, memsize ):
     rl.explorationProb = 1.0
 
     D = collections.deque(maxlen=memsize)
-    state_0 = Lander.reset()
-    # action = rl.getAction(state_prev)
-    # nextState, reward, is_done, info = Lander.step(action)
-    # multi_state = np.concatenate((state_prev, state) , axis = None)
+    frames_added = 0
 
-    for i in range(0,memsize+1):
-        #do random action
+    while(frames_added < memsize ):
+        state_0 = Lander.reset()
+    
         action = rl.getAction(state_0)
         state_1, reward, is_done, info = Lander.step(action)
 
         action = rl.getAction(state_1)
         state_2, reward, is_done, info = Lander.step(action)
 
-        action = rl.getAction(state_2)
-        state_3, reward, is_done, info = Lander.step(action)
-
         state = np.concatenate(((state_0, state_1, state_2)), axis=None)
-        # action = np.array((action_0, action_1))
-        # reward = np.array((reward_1, reward_2))
-        # reward = reward_1 + lunar.discount()
-        nextState = np.concatenate((state_1, state_2, state_3), axis=None)
-        # is_done = np.array((is_done_1, is_done_2))
+        nextState = state
+    
+        while(True):
 
-        D.append( (state, action, reward, nextState, is_done) )
+            action = rl.getAction(state_2)
+            state_3, reward, is_done, info = Lander.step(action)
 
-        if is_done:
-            state_0 = Lander.reset()
-        else:
-            state_0 = state_1
+            nextState = np.concatenate((state[STATE_SIZE:], state_3), axis=None)
 
-    # pdb.set_trace()
+            D.append( (state, action, reward, nextState, is_done) )
+            frames_added += 1
+
+            if is_done:
+                break
+            else:
+                state = nextState
+
     #reset this back to exploration prob
     rl.explorationProb = prevexploreprob
     return D
@@ -274,6 +270,6 @@ if __name__ == '__main__':
     parser.add_argument("--num_train_trials", default='1000', type=int, help="Number of simluations to train for")
     parser.add_argument("--num_test_trials", default='100', type=int, help="Number of simluations to test for")
     parser.add_argument("--num_epochs", default='1', type=int, help="Number of epochs that each train set will train for")
-    parser.add_argument("--memsize", default='3000', type=int, help="Size of memory buffer")
+    parser.add_argument("--memsize", default='500', type=int, help="Size of memory buffer")
     args = parser.parse_args()
     main(args)
