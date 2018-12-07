@@ -44,13 +44,11 @@ def basicFeatureExtractor(state, action):
     featList.append( ( (y_segment,vy_round,action), 1)   ) 
 
     ##add a key with whether legs are touching
-    tl = tr = 0
-    if touching_l > 0:
-        tl = 1
-    if touching_r > 0:
-        tr = 1 
+    is_touch = 0
+    if touching_l > 0 or touching_r > 0:
+        is_touch = 1
 
-    featList.append( (("touching", tl, tr, action), 1) )
+    featList.append( (("touching", action), is_touch) )
 
     return featList
 
@@ -240,7 +238,7 @@ class QLearningAlgorithm():
             self.weights[fname] = self.weights[fname] - update_multiplier*fval
 
 
-def simulate( Lander, rl, numTrials, maxIters=1000, do_training=True, verbose=True, do_render=False):
+def simulate( Lander, rl, numTrials, maxIters=1000, do_training=True, verbose=True, do_render=True):
     totalRewards = []
     for trial in range(0,numTrials):
 
@@ -299,15 +297,6 @@ def export_weights_sparse(weight_dict):
     output = open(filename, 'wb')
     pickle.dump(weight_dict, output)
     output.close()
-
-def test_lander(weight_dict, featureExtractor):
-    newLander = LunarLander()
-    myrl = QLearningAlgorithm(newLander.actions, newLander.discount, featureExtractor)
-    myrl.weights = weight_dict
-    myrl.explorationProb = 0.0
-
-    simulate(newLander, myrl, numTrials=100, do_training=False, do_render=True)
-
 
 def main():
     myLander = LunarLander()

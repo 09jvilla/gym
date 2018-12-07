@@ -25,22 +25,21 @@ EPS=1e-8
 def build_model( input_size=8, num_actions=4 ):
  
     #tensor that takes state as input (8 elements)
-    main_input = Input(shape=(input_size,), name='sim_state')
+    main_input = Input(shape=(input_size,), name='lander_state')
     #connect input to 4 neuron hidden later with relu activation
     
     model_type = 1
     if model_type == 0:
         x = Dense(4, activation='relu')(main_input)
     elif model_type == 1:
-        x = Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0) )(main_input)
-        x = Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0) )(x)
-        x = Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0) )(x)
+        x = Dense(8, activation='relu', kernel_regularizer=regularizers.l2(0) , name='Dense1')(main_input)
+        x = Dense(8, activation='relu', kernel_regularizer=regularizers.l2(0) , name='Dense2' )(x)
     else:
         raise Exception('Undefined model type')
     
     #connect hidden layer to output layer with 4 neurons (to represent Q score of each of our 4 actions)
     #currently using relu activation -- not sure if that is the right choice
-    all_q_estimates = Dense( num_actions, kernel_regularizer=regularizers.l2(0) )(x)
+    all_q_estimates = Dense( num_actions, kernel_regularizer=regularizers.l2(0) , name='Q_est' )(x)
 
     #tensor that takes 4 element, 1 hot vector as input
     #this is a mask vector - there will be a 1 set for the action taken, 0's elsewhere
@@ -56,11 +55,14 @@ def build_model( input_size=8, num_actions=4 ):
     model_pred = Model(inputs=[main_input], outputs=[all_q_estimates])
     #model for training - gives you q value only for action that ends up getting taken
     model_train = Model(inputs=[main_input, auxiliary_input], outputs=[masked_loss])
+    
+    train_name = "model_train"
+    pred_name = "model_pred" 
 
-    plot_model(model_train, to_file='model_train'+str(model_type), show_shapes=True)
-    plot_model(model_pred, to_file='model_pred'+str(model_type), show_shapes=True)
+    plot_model(model_train, to_file=train_name, show_shapes=True)
+    plot_model(model_pred, to_file=pred_name, show_shapes=True)
 
-
+    pdb.set_trace()
     #set up our training model with adam optimizer using MSE loss
     adopt = keras.optimizers.Adam(lr=LR, epsilon=EPS)
     model_train.compile(optimizer=adopt, loss='mean_squared_error' )
@@ -158,6 +160,8 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
             #simulate action
             #returns new state, reward, boolean indicating done and info
             nextState, reward, is_done, info = Lander.step(action)
+            
+            #Lander.render()
 
             #Keep track of reward as I go, multiplying by discount factor each time
             totalReward += totalDiscount * reward
