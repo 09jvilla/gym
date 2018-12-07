@@ -239,7 +239,7 @@ class QLearningAlgorithm():
         if False:
             exval = self.decay_exploration()
     
-        #force same action 5 times straight
+        #force same action for repeat actions times straight
         if self.numIters % self.repeatActions != 0 and self.prevAction != -1:
             return self.prevAction 
         
