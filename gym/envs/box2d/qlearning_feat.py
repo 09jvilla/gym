@@ -54,6 +54,45 @@ def basicFeatureExtractor(state, action):
 
 
 
+def basic2DFeatureExtractor(state, action):
+
+    x, y, vx, vy, theta, w, touching_l, touching_r = state
+    featList = []
+
+    y_segment = round(y,1)
+    if y > 2:
+        y_segment = 2
+
+    x_segment = round(x,1)
+    if x > 1:
+        x_segment = 1
+    if x < -1:
+        x_segment = -1
+
+    ##add a key with y segment and action
+    featureKey = ( x_segment, y_segment, action) 
+    featList.append( (featureKey,1) )
+
+    ##add a key with y velocity and action
+    featList.append( ( ("y_velocity",action), vy) )
+    featList.append( ( ("x_velocity",action), vx) )
+
+    ##add a key with angle and action
+    featList.append( (("angle", action), theta) )
+    featList.append( (("angular_vel", action), w) )
+
+    ##add a key with whether legs are touching
+    is_touch = 0
+    if touching_l > 0 or touching_r > 0:
+        is_touch = 1
+
+    featList.append( (("touching", action), is_touch) )
+
+    return featList
+
+
+
+
 
 def roundedFeatureExtractor(state, action):
     #lets round the velocities and positions
@@ -170,6 +209,7 @@ class QLearningAlgorithm():
         self.weights = defaultdict(float)
         self.numIters = 0
         self.explore_decay=0.005
+        self.prevAction = -1
 
 
     def decay_exploration(self):
@@ -197,7 +237,11 @@ class QLearningAlgorithm():
 
         if False:
             exval = self.decay_exploration()
-
+    
+        #force same action 5 times straight
+        if self.numIters % 5 != 0 and self.prevAction != -1:
+            return self.prevAction 
+        
         if random.random() < exval:
             action = random.choice(self.actions(state))
         else:
@@ -206,6 +250,7 @@ class QLearningAlgorithm():
             bestActs = [Qvals[index][1] for index in range(len(Qvals)) if Qvals[index][0] == bestScore]
             action = random.choice(bestActs) 
 
+        self.prevAction = action
         return action 
 
     # Call this function to get the step size to update the weights.
@@ -238,7 +283,7 @@ class QLearningAlgorithm():
             self.weights[fname] = self.weights[fname] - update_multiplier*fval
 
 
-def simulate( Lander, rl, numTrials, maxIters=1000, do_training=True, verbose=True, do_render=True):
+def simulate( Lander, rl, numTrials, maxIters=5000, do_training=True, verbose=True, do_render=True):
     totalRewards = []
     for trial in range(0,numTrials):
 
@@ -300,7 +345,8 @@ def export_weights_sparse(weight_dict):
 
 def main():
     myLander = LunarLander()
-    myrl, trainRewards = train_QL( myLander, basicFeatureExtractor, numTrials=1000 )
+    #myrl, trainRewards = train_QL( myLander, basicFeatureExtractor, numTrials=1000 )
+    myrl, trainRewards = train_QL( myLander, basic2DFeatureExtractor, numTrials=1000 )
     # myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
     export_weights_sparse(myrl.weights)
