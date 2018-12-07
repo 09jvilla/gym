@@ -1,7 +1,8 @@
+import argparse
 import time
-from lunar_lander import LunarLander
+from lunar_lander_1D_simple import LunarLander
 import math, random
-from collections import defaultdict
+from collections import defaultdict, deque
 import pdb
 import matplotlib.pyplot as plt
 from precision.to_precision import to_precision
@@ -201,7 +202,7 @@ def improvedFeatureExtractor(state, action):
 
 
 class QLearningAlgorithm():
-    def __init__(self, actions, discount, featureExtractor, explorationProb=0.3):
+    def __init__(self, actions, discount, featureExtractor, repeatActions, explorationProb=0.3):
         self.actions = actions
         self.discount = discount
         self.featureExtractor = featureExtractor
@@ -210,7 +211,7 @@ class QLearningAlgorithm():
         self.numIters = 0
         self.explore_decay=0.005
         self.prevAction = -1
-
+        self.repeatActions = repeatActions
 
     def decay_exploration(self):
         exploreval = endExplore + (startExplore - endExplore)*np.exp(-self.explore_decay*self.numIters)
@@ -239,7 +240,7 @@ class QLearningAlgorithm():
             exval = self.decay_exploration()
     
         #force same action 5 times straight
-        if self.numIters % 5 != 0 and self.prevAction != -1:
+        if self.numIters % self.repeatActions != 0 and self.prevAction != -1:
             return self.prevAction 
         
         if random.random() < exval:
@@ -283,8 +284,10 @@ class QLearningAlgorithm():
             self.weights[fname] = self.weights[fname] - update_multiplier*fval
 
 
-def simulate( Lander, rl, numTrials, maxIters=5000, do_training=True, verbose=True, do_render=True):
+def simulate( Lander, rl, numTrials, maxIters=5000, do_training=True, verbose=True, do_render=False):
     totalRewards = []
+    prevRewards = deque(maxlen=10)
+
     for trial in range(0,numTrials):
 
         #basically puts us back in start state
@@ -326,14 +329,21 @@ def simulate( Lander, rl, numTrials, maxIters=5000, do_training=True, verbose=Tr
         if numTrials <= 50000 or (trial % 100 == 0):
             totalRewards.append(totalReward)
 
+        if do_training:
+            prevRewards.append(totalReward)
+            past_avg_reward = sum(prevRewards) / len(prevRewards)
+            if past_avg_reward >= 200:
+                print("Solved game so breaking out of training loop!")
+                break
+
     if verbose:
         print("Finished simulating.")
 
 
     return totalRewards
 
-def train_QL( myLander, featureExtractor, numTrials=1500 ):
-    myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
+def train_QL( myLander, featureExtractor, repeatActions, numTrials ):
+    myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor, repeatActions)
     trainRewards = simulate(myLander, myrl, numTrials, verbose=True)
     return myrl, trainRewards
 
@@ -343,10 +353,10 @@ def export_weights_sparse(weight_dict):
     pickle.dump(weight_dict, output)
     output.close()
 
-def main():
+def main(args):
     myLander = LunarLander()
-    #myrl, trainRewards = train_QL( myLander, basicFeatureExtractor, numTrials=1000 )
-    myrl, trainRewards = train_QL( myLander, basic2DFeatureExtractor, numTrials=1000 )
+    myrl, trainRewards = train_QL( myLander, basicFeatureExtractor, args.repeatActions, numTrials=args.num_train_trials )
+    #myrl, trainRewards = train_QL( myLander, basic2DFeatureExtractor, numTrials=1000 )
     # myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
     export_weights_sparse(myrl.weights)
@@ -364,8 +374,13 @@ def main():
     #Now test trained model:
     myrl.explorationProb = 0
     #Can simulate from here:
-    simulate(myLander, myrl, numTrials=100, do_training=False, do_render=True)
+    simulate(myLander, myrl, numTrials=args.num_test_trials, do_training=False, do_render=True)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repeatActions", default=1, type=int, help="Force simulation to repeat actions this number of times")
+    parser.add_argument("--num_train_trials", default='50000', type=int, help="Number of simluations to train for")
+    parser.add_argument("--num_test_trials", default='100', type=int, help="Number of simluations to test for")
+    args = parser.parse_args()
+    main(args)
