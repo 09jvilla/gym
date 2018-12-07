@@ -1,7 +1,8 @@
+import argparse
 import time
-from lunar_lander import LunarLander
+from lunar_lander_1D_simple import LunarLander
 import math, random
-from collections import defaultdict
+from collections import defaultdict, deque
 import pdb
 import matplotlib.pyplot as plt
 from precision.to_precision import to_precision
@@ -44,15 +45,52 @@ def basicFeatureExtractor(state, action):
     featList.append( ( (y_segment,vy_round,action), 1)   ) 
 
     ##add a key with whether legs are touching
-    tl = tr = 0
-    if touching_l > 0:
-        tl = 1
-    if touching_r > 0:
-        tr = 1 
+    is_touch = 0
+    if touching_l > 0 or touching_r > 0:
+        is_touch = 1
 
-    featList.append( (("touching", tl, tr, action), 1) )
+    featList.append( (("touching", action), is_touch) )
 
     return featList
+
+
+
+def basic2DFeatureExtractor(state, action):
+
+    x, y, vx, vy, theta, w, touching_l, touching_r = state
+    featList = []
+
+    y_segment = round(y,1)
+    if y > 2:
+        y_segment = 2
+
+    x_segment = round(x,1)
+    if x > 1:
+        x_segment = 1
+    if x < -1:
+        x_segment = -1
+
+    ##add a key with y segment and action
+    featureKey = ( x_segment, y_segment, action) 
+    featList.append( (featureKey,1) )
+
+    ##add a key with y velocity and action
+    featList.append( ( ("y_velocity",action), vy) )
+    featList.append( ( ("x_velocity",action), vx) )
+
+    ##add a key with angle and action
+    featList.append( (("angle", action), theta) )
+    featList.append( (("angular_vel", action), w) )
+
+    ##add a key with whether legs are touching
+    is_touch = 0
+    if touching_l > 0 or touching_r > 0:
+        is_touch = 1
+
+    featList.append( (("touching", action), is_touch) )
+
+    return featList
+
 
 
 
@@ -164,7 +202,7 @@ def improvedFeatureExtractor(state, action):
 
 
 class QLearningAlgorithm():
-    def __init__(self, actions, discount, featureExtractor, explorationProb=0.3):
+    def __init__(self, actions, discount, featureExtractor, repeatActions, explorationProb=0.3):
         self.actions = actions
         self.discount = discount
         self.featureExtractor = featureExtractor
@@ -172,7 +210,8 @@ class QLearningAlgorithm():
         self.weights = defaultdict(float)
         self.numIters = 0
         self.explore_decay=0.005
-
+        self.prevAction = -1
+        self.repeatActions = repeatActions
 
     def decay_exploration(self):
         exploreval = endExplore + (startExplore - endExplore)*np.exp(-self.explore_decay*self.numIters)
@@ -199,7 +238,11 @@ class QLearningAlgorithm():
 
         if False:
             exval = self.decay_exploration()
-
+    
+        #force same action for repeat actions times straight
+        if self.numIters % self.repeatActions != 0 and self.prevAction != -1:
+            return self.prevAction 
+        
         if random.random() < exval:
             action = random.choice(self.actions(state))
         else:
@@ -208,6 +251,7 @@ class QLearningAlgorithm():
             bestActs = [Qvals[index][1] for index in range(len(Qvals)) if Qvals[index][0] == bestScore]
             action = random.choice(bestActs) 
 
+        self.prevAction = action
         return action 
 
     # Call this function to get the step size to update the weights.
@@ -240,8 +284,10 @@ class QLearningAlgorithm():
             self.weights[fname] = self.weights[fname] - update_multiplier*fval
 
 
-def simulate( Lander, rl, numTrials, maxIters=1000, do_training=True, verbose=True, do_render=False):
+def simulate( Lander, rl, numTrials, maxIters=5000, do_training=True, verbose=True, do_render=False):
     totalRewards = []
+    prevRewards = deque(maxlen=10)
+
     for trial in range(0,numTrials):
 
         #basically puts us back in start state
@@ -283,14 +329,21 @@ def simulate( Lander, rl, numTrials, maxIters=1000, do_training=True, verbose=Tr
         if numTrials <= 50000 or (trial % 100 == 0):
             totalRewards.append(totalReward)
 
+        if do_training:
+            prevRewards.append(totalReward)
+            past_avg_reward = sum(prevRewards) / len(prevRewards)
+            if past_avg_reward >= 200:
+                print("Solved game so breaking out of training loop!")
+                break
+
     if verbose:
         print("Finished simulating.")
 
 
     return totalRewards
 
-def train_QL( myLander, featureExtractor, numTrials=1500 ):
-    myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
+def train_QL( myLander, featureExtractor, repeatActions, numTrials ):
+    myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor, repeatActions)
     trainRewards = simulate(myLander, myrl, numTrials, verbose=True)
     return myrl, trainRewards
 
@@ -300,18 +353,10 @@ def export_weights_sparse(weight_dict):
     pickle.dump(weight_dict, output)
     output.close()
 
-def test_lander(weight_dict, featureExtractor):
-    newLander = LunarLander()
-    myrl = QLearningAlgorithm(newLander.actions, newLander.discount, featureExtractor)
-    myrl.weights = weight_dict
-    myrl.explorationProb = 0.0
-
-    simulate(newLander, myrl, numTrials=100, do_training=False, do_render=True)
-
-
-def main():
+def main(args):
     myLander = LunarLander()
-    myrl, trainRewards = train_QL( myLander, basicFeatureExtractor, numTrials=1000 )
+    myrl, trainRewards = train_QL( myLander, basicFeatureExtractor, args.repeatActions, numTrials=args.num_train_trials )
+    #myrl, trainRewards = train_QL( myLander, basic2DFeatureExtractor, numTrials=1000 )
     # myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
     export_weights_sparse(myrl.weights)
@@ -329,8 +374,13 @@ def main():
     #Now test trained model:
     myrl.explorationProb = 0
     #Can simulate from here:
-    simulate(myLander, myrl, numTrials=100, do_training=False, do_render=True)
+    simulate(myLander, myrl, numTrials=args.num_test_trials, do_training=False, do_render=True)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repeatActions", default=1, type=int, help="Force simulation to repeat actions this number of times")
+    parser.add_argument("--num_train_trials", default='50000', type=int, help="Number of simluations to train for")
+    parser.add_argument("--num_test_trials", default='100', type=int, help="Number of simluations to test for")
+    args = parser.parse_args()
+    main(args)

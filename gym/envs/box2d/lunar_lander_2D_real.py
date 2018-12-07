@@ -22,7 +22,7 @@ from gym.utils import seeding, EzPickle
 # Landing outside landing pad is possible. Fuel is infinite, so an agent can learn to fly and then land
 # on its first attempt. Please see source code for details.
 #
-# Too see heuristic landing, run:
+# To see heuristic landing, run:
 #
 # python gym/envs/box2d/lunar_lander.py
 #
@@ -32,15 +32,13 @@ from gym.utils import seeding, EzPickle
 #
 # Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
-#30 is slowest at which its not trivial
-FPS    = 20
+FPS    = 50
 SCALE  = 30.0   # affects how fast-paced the game is, forces should be adjusted as well
 
 MAIN_ENGINE_POWER  = 13.0
 SIDE_ENGINE_POWER  =  0.6
 
-# INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
-INITIAL_RANDOM = 0.0
+INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
 
 LANDER_POLY =[
     (-14,+17), (-17,0), (-17,-10),
@@ -85,12 +83,12 @@ class LunarLander(gym.Env, EzPickle):
         self.seed()
         self.viewer = None
 
-        self.discount_param = 1.0
         self.world = Box2D.b2World()
         self.moon = None
         self.lander = None
         self.particles = []
 
+        self.discount_param = 1
         self.prev_reward = None
 
         # useful range is -1 .. +1, but spikes can be higher
@@ -113,7 +111,8 @@ class LunarLander(gym.Env, EzPickle):
             raise Exception("Continuous version yet to be implemented.")
         else:
             #note that in the future, should just use self.action_space
-            return [0,2]
+            #return [0,2]
+            return range(0,self.action_space.n)
 
     def set_discount(self, x):
         self.discount_param = x
@@ -124,6 +123,7 @@ class LunarLander(gym.Env, EzPickle):
 	#Jenna: get the size of the world
     def getWorldSize(self):
         return [VIEWPORT_W, VIEWPORT_H]
+
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -154,11 +154,8 @@ class LunarLander(gym.Env, EzPickle):
         CHUNKS = 11
         height = self.np_random.uniform(0, H/2, size=(CHUNKS+1,) )
         chunk_x  = [W/(CHUNKS-1)*i for i in range(CHUNKS)]
-
-        ##JEV: make landing pad wider
-        self.helipad_x1 = chunk_x[1]
-        self.helipad_x2 = chunk_x[CHUNKS-2]
-
+        self.helipad_x1 = chunk_x[CHUNKS//2-1]
+        self.helipad_x2 = chunk_x[CHUNKS//2+1]
         self.helipad_y  = H/4
         height[CHUNKS//2-2] = self.helipad_y
         height[CHUNKS//2-1] = self.helipad_y
@@ -266,16 +263,9 @@ class LunarLander(gym.Env, EzPickle):
             assert self.action_space.contains(action), "%r (%s) invalid " % (action, type(action))
 
         # Engines
-        #JEV: Hack -- set lander andle to zero
-        self.lander.angle = 0
-
         tip  = (math.sin(self.lander.angle), math.cos(self.lander.angle))
         side = (-tip[1], tip[0]);
-        # print('angle: {}'.format(self.lander.angle))
         dispersion = [self.np_random.uniform(-1.0, +1.0) / SCALE for _ in range(2)]
-        ##also trolling -- remove system noise
-        dispersion = np.zeros(shape=np.shape(dispersion))
-
 
         m_power = 0.0
         if (self.continuous and action[0] > 0.0) or (not self.continuous and action==2):
@@ -284,11 +274,9 @@ class LunarLander(gym.Env, EzPickle):
                 m_power = (np.clip(action[0], 0.0,1.0) + 1.0)*0.5   # 0.5..1.0
                 assert m_power>=0.5 and m_power <= 1.0
             else:
-                m_power = 2.2
-            # ox =  tip[0]*(4/SCALE + 2*dispersion[0]) + side[0]*dispersion[1]   # 4 is move a bit downwards, +-2 for randomness
-            ox =  0
-            oy = -tip[1]*(4/SCALE + 2*dispersion[0])
-            # oy = -tip[1]*(4/SCALE + 2*dispersion[0]) - side[1]*dispersion[1]
+                m_power = 1.0
+            ox =  tip[0]*(4/SCALE + 2*dispersion[0]) + side[0]*dispersion[1]   # 4 is move a bit downwards, +-2 for randomness
+            oy = -tip[1]*(4/SCALE + 2*dispersion[0]) - side[1]*dispersion[1]
             impulse_pos = (self.lander.position[0] + ox, self.lander.position[1] + oy)
             p = self._create_particle(3.5, impulse_pos[0], impulse_pos[1], m_power)    # particles are just a decoration, 3.5 is here to make particle speed adequate
             p.ApplyLinearImpulse(           ( ox*MAIN_ENGINE_POWER*m_power,  oy*MAIN_ENGINE_POWER*m_power), impulse_pos, True)
@@ -302,20 +290,11 @@ class LunarLander(gym.Env, EzPickle):
                 s_power = np.clip(np.abs(action[1]), 0.5,1.0)
                 assert s_power>=0.5 and s_power <= 1.0
             else:
-                # REFERNECE: Action 0,1,2,3 = Nop, fire left engine, main engine, right engine
-                # Note that only action in [1,3] can enter this segment of code
-                # (look if statement above)
                 direction = action-2
-                # direction = 3
-                # s_power = 1.0
-                ##also trolling -- no system power even if we'd like to use side engines
-                s_power = 0
-            # ox =  tip[0]*dispersion[0] + side[0]*(3*dispersion[1]+direction*SIDE_ENGINE_AWAY/SCALE)
-            # oy = -tip[1]*dispersion[0] - side[1]*(3*dispersion[1]+direction*SIDE_ENGINE_AWAY/SCALE)
-            ox =  0
-            oy = -tip[1]*(4/SCALE + 2*dispersion[0])
-            impulse_pos = (self.lander.position[0] + ox - tip[0]*17/SCALE,
-            self.lander.position[1] + oy + tip[1]*SIDE_ENGINE_HEIGHT/SCALE)
+                s_power = 1.0
+            ox =  tip[0]*dispersion[0] + side[0]*(3*dispersion[1]+direction*SIDE_ENGINE_AWAY/SCALE)
+            oy = -tip[1]*dispersion[0] - side[1]*(3*dispersion[1]+direction*SIDE_ENGINE_AWAY/SCALE)
+            impulse_pos = (self.lander.position[0] + ox - tip[0]*17/SCALE, self.lander.position[1] + oy + tip[1]*SIDE_ENGINE_HEIGHT/SCALE)
             p = self._create_particle(0.7, impulse_pos[0], impulse_pos[1], s_power)
             p.ApplyLinearImpulse(           ( ox*SIDE_ENGINE_POWER*s_power,  oy*SIDE_ENGINE_POWER*s_power), impulse_pos, True)
             self.lander.ApplyLinearImpulse( (-ox*SIDE_ENGINE_POWER*s_power, -oy*SIDE_ENGINE_POWER*s_power), impulse_pos, True)
@@ -350,19 +329,12 @@ class LunarLander(gym.Env, EzPickle):
         reward -= s_power*0.03
 
         done = False
-        if abs(state[0]) >= 1.0:
+        if self.game_over or abs(state[0]) >= 1.0:
             done   = True
             reward = -100
-        if self.game_over:
-            print("Slammed into the ground")
-            print( state ) 
-            done   = True
-            reward = 20
         if not self.lander.awake:
-            print("Landed softly")
             done   = True
             reward = +100
-
         return np.array(state, dtype=np.float32), reward, done, {}
 
     def render(self, mode='human'):
@@ -410,9 +382,9 @@ class LunarLander(gym.Env, EzPickle):
 class LunarLanderContinuous(LunarLander):
     continuous = True
 
-def heuristic(env, s, dumb):
+def heuristic(env, s):
     # Heuristic for:
-    # 1. Testing.
+    # 1. Testing. 
     # 2. Demonstration rollout.
     angle_targ = s[0]*0.5 + s[2]*1.0         # angle should point towards center (s[0] is horizontal coordinate, s[2] hor speed)
     if angle_targ >  0.4: angle_targ =  0.4  # more than 0.4 radians (22 degrees) is bad
@@ -420,17 +392,11 @@ def heuristic(env, s, dumb):
     hover_targ = 0.55*np.abs(s[0])           # target y should be proporional to horizontal offset
 
     # PID controller: s[4] angle, s[5] angularSpeed
-    if dumb==False:
-        angle_todo = (angle_targ - s[4])*0.5 - (s[5])*1.0
-    else:
-        angle_todo = (angle_targ - s[4])*0.5
+    angle_todo = (angle_targ - s[4])*0.5 - (s[5])*1.0
     #print("angle_targ=%0.2f, angle_todo=%0.2f" % (angle_targ, angle_todo))
 
     # PID controller: s[1] vertical coordinate s[3] vertical speed
-    if dumb==False:
-        hover_todo = (hover_targ - s[1])*0.5 - (s[3])*0.5
-    else:
-        hover_todo =  (hover_targ - s[1])*0.5 - (s[3])*0.5
+    hover_todo = (hover_targ - s[1])*0.5 - (s[3])*0.5
     #print("hover_targ=%0.2f, hover_todo=%0.2f" % (hover_targ, hover_todo))
 
     if s[6] or s[7]: # legs have contact
@@ -447,13 +413,13 @@ def heuristic(env, s, dumb):
         elif angle_todo > +0.05: a = 1
     return a
 
-def demo_heuristic_lander(env, seed=None, render=False, dumb=False):
+def demo_heuristic_lander(env, seed=None, render=False):
     env.seed(seed)
     total_reward = 0
     steps = 0
     s = env.reset()
     while True:
-        a = heuristic(env, s, dumb)
+        a = heuristic(env, s)
         s, r, done, info = env.step(a)
         total_reward += r
 
@@ -461,11 +427,9 @@ def demo_heuristic_lander(env, seed=None, render=False, dumb=False):
             still_open = env.render()
             if still_open == False: break
 
-        """
         if steps % 20 == 0 or done:
             print("observations:", " ".join(["{:+0.2f}".format(x) for x in s]))
             print("step {} total_reward {:+0.2f}".format(steps, total_reward))
-        """
         steps += 1
         if done: break
     return total_reward
@@ -473,3 +437,5 @@ def demo_heuristic_lander(env, seed=None, render=False, dumb=False):
 
 if __name__ == '__main__':
     demo_heuristic_lander(LunarLander(), render=True)
+    
+    
