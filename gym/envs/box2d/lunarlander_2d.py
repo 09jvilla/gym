@@ -88,6 +88,7 @@ class LunarLander(gym.Env, EzPickle):
         self.lander = None
         self.particles = []
 
+        self.discount_param = 1
         self.prev_reward = None
 
         # useful range is -1 .. +1, but spikes can be higher
@@ -103,6 +104,25 @@ class LunarLander(gym.Env, EzPickle):
             self.action_space = spaces.Discrete(4)
 
         self.reset()
+
+    def actions(self, state):
+        if self.continuous:
+            raise Exception("Continuous version yet to be implemented.")
+        else:
+            #note that in the future, should just use self.action_space
+            #return [0,2]
+            return range(0,self.action_space.n)
+
+    def set_discount(self, x):
+        self.discount_param = x
+    #Jen: adding discount function
+    def discount(self):
+        return self.discount_param
+
+	#Jenna: get the size of the world
+    def getWorldSize(self):
+        return [VIEWPORT_W, VIEWPORT_H]
+
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
