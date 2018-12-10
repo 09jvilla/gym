@@ -1,6 +1,6 @@
 import argparse
 import time
-from lunar_lander_1D_simple import LunarLander
+from lunar_lander_1D_fullframe import LunarLander
 import math, random
 from collections import defaultdict, deque
 import pdb

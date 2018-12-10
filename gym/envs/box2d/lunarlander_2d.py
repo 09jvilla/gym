@@ -38,6 +38,8 @@ SCALE  = 30.0   # affects how fast-paced the game is, forces should be adjusted 
 MAIN_ENGINE_POWER  = 13.0
 SIDE_ENGINE_POWER  =  0.6
 
+FIXED_SEED = 2013
+
 INITIAL_RANDOM = 500.0   # Set 1500 to make game harder
 
 LANDER_POLY =[
@@ -80,7 +82,7 @@ class LunarLander(gym.Env, EzPickle):
 
     def __init__(self):
         EzPickle.__init__(self)
-        self.seed()
+        self.seed(seed=FIXED_SEED)
         self.viewer = None
 
         self.world = Box2D.b2World()
@@ -329,9 +331,11 @@ class LunarLander(gym.Env, EzPickle):
 
         done = False
         if self.game_over or abs(state[0]) >= 1.0:
+            #print("Crash landed. " )
             done   = True
             reward = -100
         if not self.lander.awake:
+            print("Landed softly." )
             done   = True
             reward = +100
         return np.array(state, dtype=np.float32), reward, done, {}
