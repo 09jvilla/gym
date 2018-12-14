@@ -1,6 +1,10 @@
 import argparse
 import time
+<<<<<<< HEAD
 from lunarlander_2d import LunarLander
+=======
+from lunar_lander_1D_fullframe import LunarLander
+>>>>>>> 0b81cd8d1d942fecf668e891c6dbfc13fdc7cba8
 import math, random
 from collections import defaultdict, deque
 import pdb
