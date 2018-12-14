@@ -1,5 +1,5 @@
 import time
-from lunar_lander_dumb import LunarLander
+from lunarlander_2d import LunarLander
 import math, random
 from collections import defaultdict
 import numpy as np
@@ -141,11 +141,12 @@ class QLearningAlgorithm():
 	def getAction(self, state):
 		self.numIters += 1
 		# pdb.set_trace()
-		state_segment = state[(NUM_PAST_STATE-1)*STATE_SIZE:NUM_PAST_STATE*STATE_SIZE]
+		# state_segment = state[(NUM_PAST_STATE-1)*STATE_SIZE:NUM_PAST_STATE*STATE_SIZE]
+        # state
 		if random.random() < self.explorationProb:
-			return random.choice(self.actions(state_segment))
+			return random.choice(self.actions(state))
 		else:
-			return max((self.getQ(state, action), action) for action in self.actions(state_segment))[1]
+			return max((self.getQ(state, action), action) for action in self.actions(state))[1]
 
     # Call this function to get the step size to update the weights.
 	def getStepSize(self):
@@ -222,7 +223,9 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 		for _ in range(0,maxIters):
 			#get action from QLearning Algo
-			action = rl.getAction(state_2)
+			# pdb.set_trace()
+			state_segment = state[2*STATE_SIZE:]
+			action = rl.getAction(state_segment)
 
 			#simulate action
 			#returns new state, reward, boolean indicating done and info
@@ -250,7 +253,7 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
                         #advance state
 			state = new_state
-			state_2 = nextState
+
 
 		if verbose:
 			if totalReward > 150:
@@ -284,7 +287,7 @@ def simulate( Lander, rl, numTrials, maxIters=10000, do_training=True, verbose=T
 
 def train_QL( myLander, featureExtractor, numTrials=1000 ):
 	myrl = QLearningAlgorithm(myLander.actions, myLander.discount, featureExtractor)
-	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=False)
+	trainRewards = simulate(myLander, myrl, numTrials, verbose=True, render=True)
 
 
 	return myrl, trainRewards
@@ -297,16 +300,16 @@ def export_weights_sparse(weight_dict):
 
 def main():
 	myLander = LunarLander()
-	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=50 )
+	myrl, trainRewards = train_QL( myLander, improvedFeatureExtractor, numTrials=5000 )
 	export_weights_sparse(myrl.weights)
 	# myrl, trainRewards = train_QL( myLander, roundedFeatureExtractor, numTrials=500 )
 
 	print("Training completed. Switching to testing.")
 
-	# plt.plot(trainRewards)
-	# plt.ylabel('trainingReward')
-	# plt.xlabel('Trial No.')
-	# plt.savefig("output/trainprogress"+ time.strftime("%m%d_%H%M") )
+	plt.plot(trainRewards)
+	plt.ylabel('trainingReward')
+	plt.xlabel('Trial No.')
+	plt.savefig("output/trainprogress"+ time.strftime("%m%d_%H%M") )
 	# plt.show()
 
 	#Now test trained model:

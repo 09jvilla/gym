@@ -23,11 +23,11 @@ EPS=1e-8
 
 
 def build_model( input_size=8, num_actions=4 ):
- 
+
     #tensor that takes state as input (8 elements)
     main_input = Input(shape=(input_size,), name='lander_state')
     #connect input to 4 neuron hidden later with relu activation
-    
+
     model_type = 1
     if model_type == 0:
         x = Dense(4, activation='relu')(main_input)
@@ -36,7 +36,7 @@ def build_model( input_size=8, num_actions=4 ):
         x = Dense(8, activation='relu', kernel_regularizer=regularizers.l2(0) , name='Dense2' )(x)
     else:
         raise Exception('Undefined model type')
-    
+
     #connect hidden layer to output layer with 4 neurons (to represent Q score of each of our 4 actions)
     #currently using relu activation -- not sure if that is the right choice
     all_q_estimates = Dense( num_actions, kernel_regularizer=regularizers.l2(0) , name='Q_est' )(x)
@@ -55,9 +55,9 @@ def build_model( input_size=8, num_actions=4 ):
     model_pred = Model(inputs=[main_input], outputs=[all_q_estimates])
     #model for training - gives you q value only for action that ends up getting taken
     model_train = Model(inputs=[main_input, auxiliary_input], outputs=[masked_loss])
-    
+
     train_name = "model_train"
-    pred_name = "model_pred" 
+    pred_name = "model_pred"
 
     plot_model(model_train, to_file=train_name, show_shapes=True)
     plot_model(model_pred, to_file=pred_name, show_shapes=True)
@@ -77,7 +77,7 @@ class QLearningAlgorithm():
         self.discount = discount
         self.allow_explore = allow_explore
         self.numIters = 0
-        self.explore_decay=0.0001 
+        self.explore_decay=0.0001
         self.explore_start=0.3
         self.explore_stop=0.01
         self.epochs = epochs
@@ -94,13 +94,13 @@ class QLearningAlgorithm():
     # Here we use the epsilon-greedy algorithm: with probability
     # |explorationProb|, take a random action.
     def getAction(self, state, nodecay=False):
-        
+
         if not nodecay:
             self.numIters += 1
-        
+
         randval = random.random()
-        exploreval = self.explore_stop + (self.explore_start - self.explore_stop)*np.exp(-self.explore_decay*self.numIters) 
-       
+        exploreval = self.explore_stop + (self.explore_start - self.explore_stop)*np.exp(-self.explore_decay*self.numIters)
+
         if (not self.allow_explore) or randval>exploreval:
             return np.argmax( self.getQ(state) )
         else:
@@ -120,9 +120,9 @@ class QLearningAlgorithm():
 
         #get Q values for each of the next states
         next_stateQs = self.getQ(next_states)
-        #Get the max Q value from that 
+        #Get the max Q value from that
         vopt_nextstate = np.max(next_stateQs, axis=1)
-        #add to target the vopt_nextstate*reward. remember vopt_nextstate is 0 if 
+        #add to target the vopt_nextstate*reward. remember vopt_nextstate is 0 if
         #the state we were at was endgame. (i.e. all you want is the final reward in this case)
         y_train += vopt_nextstate*is_dones*self.discount()
 
@@ -161,7 +161,7 @@ def simulate( Lander, rl, memD, numTrials, maxIters=600, do_training=True, verbo
             #simulate action
             #returns new state, reward, boolean indicating done and info
             nextState, reward, is_done, info = Lander.step(action)
-            
+
             #Lander.render()
 
             #Keep track of reward as I go, multiplying by discount factor each time
@@ -177,7 +177,7 @@ def simulate( Lander, rl, memD, numTrials, maxIters=600, do_training=True, verbo
                     #pdb.set_trace()
                     memD_sample = random.sample(memD, SAMPLE_SIZE)
                     loss = rl.incorporateFeedback_toNet(memD_sample, verbose )
-                
+
             if is_done:
                 #this trial has ended so break out of it
                 break
@@ -189,7 +189,7 @@ def simulate( Lander, rl, memD, numTrials, maxIters=600, do_training=True, verbo
         if verbose:
             print("Trial %d (totalReward = %s)" % (trial, totalReward))
             print("Loss: " + str(loss))
-        
+
         totalRewards.append(totalReward)
 
     if verbose:
@@ -199,7 +199,7 @@ def simulate( Lander, rl, memD, numTrials, maxIters=600, do_training=True, verbo
 
 def train_QL( myLander, numTrials, numEpochs,  memsize ):
     myrl = QLearningAlgorithm(myLander.actions, myLander.discount , numEpochs)
-   
+
 
     #init memory
     print("Init memory: ")
@@ -222,7 +222,7 @@ def init_memory(Lander, rl, memsize ):
         nextState, reward, is_done, info = Lander.step(action)
 
         D.append( (state, action, reward, nextState, is_done) )
-        
+
         if is_done:
             state = Lander.reset()
         else:
@@ -250,7 +250,7 @@ def main(args):
     plt.plot(totalLoss)
     plt.savefig('plots/loss_v_time_memSz_' + str(args.memsize) + '_epochs' + str(args.num_epochs) + '.png')
     #plt.show()
-    
+
     #Now test trained model:
     myrl.explorationProb = 0
     #Can simulate from here:

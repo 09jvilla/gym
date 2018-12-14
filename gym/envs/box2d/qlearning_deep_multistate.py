@@ -140,11 +140,8 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
         action = random.choice(rl.actions(state_1))
         state_2, reward, is_done, info = Lander.step(action)
         #
-        action = random.choice(rl.actions(state_2))
-        state_3, reward, is_done, info = Lander.step(action)
 
         state = np.concatenate(((state_0, state_1, state_2)), axis=None)
-        nextState = np.concatenate((state_1, state_2, state_3), axis=None)
 
         totalDiscount = 1
         totalReward = 0
@@ -175,7 +172,7 @@ def simulate( Lander, rl, memD, numTrials, maxIters=10000, do_training=True, ver
                 break
 
             #advance state
-            state_0 = state_1
+            state = new_state
 
         totalLoss.extend(loss_list)
         if verbose:
