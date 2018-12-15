@@ -1,7 +1,8 @@
 CS221-Autum2018
 Jenna Lee (yunjlee)
 Jennifer Villa (jvilla3)
-**********
+
+====================================
 Source codes for all attempted Q-learning and function approximation solution to Lunarlander-v2. 
 
 0. Before running any source codes, set up the conda environment using
@@ -25,7 +26,7 @@ This source code will solve the full 2d lunarlander problem with bigger feature 
 This source code will attempt to solve the full 2d lunarlander problem with neural network to extract features instead of linear approximation of feature weights. 
 
 
-
+==========================================================================================
 
 
 
