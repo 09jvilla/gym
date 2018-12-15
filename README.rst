@@ -1,3 +1,36 @@
+CS221-Autum2018
+Jenna Lee (yunjlee)
+Jennifer Villa (jvilla3)
+**********
+Source codes for all attempted Q-learning and function approximation solution to Lunarlander-v2. 
+
+0. Before running any source codes, set up the conda environment using
+conda env create -f environment.yml
+
+Below are the commands/source files that can replicate differnet solutions:
+
+---python keyboard_agent.py
+: Available from OpenAIGym. This is a good way to gain intuition about the game. You may play the game of attempting to softly land on the terrain by choosing one of the four actions (Do nothing - numpad 0; fire main engine - numpad 2; fire left engine - numpad 1; fire right engine -3). 
+
+---python qlearning.py 
+This source code will solve the simple lunarlander problem in 1D setup. Most of system noise had been lifted, and the only action that lunar lander can take is either do nothing, or firing the main engine. 
+
+---python qlearning_feat_1d_full.py
+This source code will solve the simple lunarlander problem with full frame. This required application of the same action for a certain amount of steps (intended delayed calculation of next steps)
+
+---python qlearning_feat.py 
+This source code will solve the full 2d lunarlander problem with bigger feature extractor. Unfortunately, now the problem has become too complicated that our solution fails to converge on the full problem as mentioned in the final report. 
+
+---python qlearning_deep.py
+This source code will attempt to solve the full 2d lunarlander problem with neural network to extract features instead of linear approximation of feature weights. 
+
+
+
+
+
+
+
+
 OpenAI Gym
 **********
 
